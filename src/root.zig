@@ -1,0 +1,62 @@
+pub const types = @import("types.zig");
+pub const scalar = @import("scalar.zig");
+pub const cast = @import("cast.zig");
+pub const set = @import("set.zig");
+pub const dot = @import("dot.zig");
+pub const spatial = @import("spatial.zig");
+pub const probability = @import("probability.zig");
+pub const each = @import("each.zig");
+pub const reduce = @import("reduce.zig");
+pub const sparse = @import("sparse.zig");
+pub const geospatial = @import("geospatial.zig");
+pub const curved = @import("curved.zig");
+pub const mesh = @import("mesh.zig");
+pub const dots = @import("dots.zig");
+pub const sets = @import("sets.zig");
+pub const spatials = @import("spatials.zig");
+pub const maxsim = @import("maxsim.zig");
+
+pub const U1x8 = types.U1x8;
+pub const I4x2 = types.I4x2;
+pub const U4x2 = types.U4x2;
+pub const E4M3 = types.E4M3;
+pub const E5M2 = types.E5M2;
+pub const E2M3 = types.E2M3;
+pub const E3M2 = types.E3M2;
+pub const I8 = types.I8;
+pub const U8 = types.U8;
+pub const I16 = types.I16;
+pub const U16 = types.U16;
+pub const I32 = types.I32;
+pub const U32 = types.U32;
+pub const I64 = types.I64;
+pub const U64 = types.U64;
+pub const F16 = types.F16;
+pub const BF16 = types.BF16;
+pub const F32 = types.F32;
+pub const F64 = types.F64;
+pub const F16C = types.F16C;
+pub const BF16C = types.BF16C;
+pub const F32C = types.F32C;
+pub const F64C = types.F64C;
+pub const DType = types.DType;
+pub const DTypeFamily = types.DTypeFamily;
+pub const KernelKind = types.KernelKind;
+pub const Capability = types.Capability;
+pub const KernelFunction = types.KernelFunction;
+pub const KernelLookup = types.KernelLookup;
+
+pub const Version = types.Version;
+
+test "root namespace wrappers execute" {
+    const std = @import("std");
+    const dot_a = [_]F32{ 1, 2, 3 };
+    const dot_b = [_]F32{ 4, 5, 6 };
+    const spatial_a = [_]F32{ 0, 0 };
+    const spatial_b = [_]F32{ 3, 4 };
+    try std.testing.expectEqual(@as(F64, 32), try dot.dot(.f32, std.mem.sliceAsBytes(dot_a[0..]), std.mem.sliceAsBytes(dot_b[0..]), dot_a.len));
+    try std.testing.expectApproxEqAbs(@as(F64, 5), try spatial.euclidean(.f32, std.mem.sliceAsBytes(spatial_a[0..]), std.mem.sliceAsBytes(spatial_b[0..]), spatial_a.len), 1e-6);
+    const probability_p = [_]F32{ 0.25, 0.75 };
+    const probability_bytes = std.mem.sliceAsBytes(probability_p[0..]);
+    try std.testing.expectApproxEqAbs(@as(F64, 0), try probability.kld(.f32, probability_bytes, probability_bytes, probability_p.len), 1e-6);
+}

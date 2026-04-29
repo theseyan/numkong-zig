@@ -1,0 +1,24 @@
+.{
+    .name = .numkong_zig,
+    .version = "0.1.0",
+    .fingerprint = 0x901bb70c9b6dc011,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .numkong = .{
+            .url = "https://github.com/ashvardanian/NumKong/archive/refs/tags/v7.6.0.tar.gz",
+            .hash = "N-V-__8AAAM30gDdkIswPYtw_Yjhcz084RuGOHyylpgmxucY",
+        },
+        .zbench = .{
+            .url = "https://github.com/hendriknielaender/zBench/archive/refs/tags/v0.13.0.tar.gz",
+            .hash = "zbench-0.13.0-YTdc7xVBAQCCMC-IdLLuotBeiNNNm8k9Pi2V4VYqrwfI",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "bench",
+        "LICENSE",
+        "README.md",
+        "src",
+    },
+}
