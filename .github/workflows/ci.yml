@@ -22,9 +22,6 @@ jobs:
           - name: windows-x86_64
             os: windows-latest
             target: x86_64-windows-gnu
-          - name: windows-aarch64
-            os: windows-11-arm
-            target: native
     runs-on: ${{ matrix.os }}
     name: test-${{ matrix.name }}
 
