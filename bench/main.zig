@@ -5,6 +5,7 @@ const zbench = @import("zbench");
 const allocator = std.heap.c_allocator;
 const types = numkong.types;
 const PackedBytes = []align(numkong.PackedBufferAlignment) u8;
+const AlignedU1x8 = []align(numkong.PackedBufferAlignment) types.U1x8;
 const PackedAlignment = std.mem.Alignment.fromByteUnits(numkong.PackedBufferAlignment);
 
 const dense_len = 4096;
@@ -142,8 +143,8 @@ const Data = struct {
     dots_packed: PackedBytes,
     dots_out: []types.F64,
     dots_symmetric_out: []types.F64,
-    u1_vectors: []types.U1x8,
-    u1_queries: []types.U1x8,
+    u1_vectors: AlignedU1x8,
+    u1_queries: AlignedU1x8,
     u1_packed: PackedBytes,
     sets_out_u32: []types.U32,
     sets_out_f32: []types.F32,
@@ -188,8 +189,8 @@ const Data = struct {
         data.matrix_b = try allocator.alloc(types.F32, matrix_cols * matrix_depth);
         data.dots_out = try allocator.alloc(types.F64, matrix_rows * matrix_cols);
         data.dots_symmetric_out = try allocator.alloc(types.F64, matrix_rows * matrix_rows);
-        data.u1_vectors = try allocator.alloc(types.U1x8, matrix_rows * u1_bytes);
-        data.u1_queries = try allocator.alloc(types.U1x8, matrix_cols * u1_bytes);
+        data.u1_vectors = try allocator.alignedAlloc(types.U1x8, PackedAlignment, matrix_rows * u1_bytes);
+        data.u1_queries = try allocator.alignedAlloc(types.U1x8, PackedAlignment, matrix_cols * u1_bytes);
         data.sets_out_u32 = try allocator.alloc(types.U32, matrix_rows * matrix_cols);
         data.sets_out_f32 = try allocator.alloc(types.F32, matrix_rows * matrix_rows);
         data.maxsim_queries_data = try allocator.alloc(types.F32, maxsim_queries * matrix_depth);
