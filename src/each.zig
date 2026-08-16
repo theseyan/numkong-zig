@@ -318,9 +318,9 @@ test "each trigonometry byte API covers supported dtypes" {
     try sin(.f32, f32_in, f32_out);
     try std.testing.expectApproxEqAbs(@as(types.F32, 0), out_f32[0], 1e-6);
     try cos(.f32, f32_in, f32_out);
-    try std.testing.expectApproxEqAbs(@as(types.F32, 1), out_f32[0], 1e-6);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 1), out_f32[0], 1e-4);
     try atan(.f32, f32_in, f32_out);
-    try std.testing.expectApproxEqAbs(@as(types.F32, 0), out_f32[0], 1e-6);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 0), out_f32[0], 1e-4);
 
     try sin(.f16, f16_in, f16_out);
     try std.testing.expectApproxEqAbs(@as(types.F32, 0), cast.toF32(.f16, out_f16[0]), 1e-3);

@@ -161,6 +161,14 @@ fn expectSingleElementMinMax(comptime dtype: types.DType, data: []const u8, coun
     try std.testing.expectEqual(@as(usize, 0), result.max_index);
 }
 
+fn expectPackedMinMax(comptime dtype: types.DType, data: []const u8, count: usize, min_index: usize, max_index: usize) !void {
+    const result = try minmax(dtype, data, count);
+    try std.testing.expectEqual(@as(@TypeOf(result.min), 0), result.min);
+    try std.testing.expectEqual(@as(@TypeOf(result.max), 1), result.max);
+    try std.testing.expectEqual(min_index, result.min_index);
+    try std.testing.expectEqual(max_index, result.max_index);
+}
+
 test "reduce comptime dtype API returns exact floating results" {
     const xs_f32 = [_]types.F32{ 1, 2, 3 };
     const m_f32 = try moments(.f32, std.mem.sliceAsBytes(xs_f32[0..]), xs_f32.len);
@@ -231,9 +239,12 @@ test "reduce comptime dtype API covers all zero dtypes" {
     try expectSingleElementMinMax(.u32, std.mem.sliceAsBytes(zero_u32[0..]), 1);
     try expectSingleElementMinMax(.i64, std.mem.sliceAsBytes(zero_i64[0..]), 1);
     try expectSingleElementMinMax(.u64, std.mem.sliceAsBytes(zero_u64[0..]), 1);
-    try expectSingleElementMinMax(.i4, std.mem.sliceAsBytes(zero_i4[0..]), 2);
-    try expectSingleElementMinMax(.u4, std.mem.sliceAsBytes(zero_u4[0..]), 2);
-    try expectSingleElementMinMax(.u1, std.mem.sliceAsBytes(zero_u1[0..]), 8);
+    const mixed_i4 = [_]types.I4x2{0x01};
+    const mixed_u4 = [_]types.U4x2{0x01};
+    const mixed_u1 = [_]types.U1x8{0x01};
+    try expectPackedMinMax(.i4, std.mem.sliceAsBytes(mixed_i4[0..]), 2, 1, 0);
+    try expectPackedMinMax(.u4, std.mem.sliceAsBytes(mixed_u4[0..]), 2, 1, 0);
+    try expectPackedMinMax(.u1, std.mem.sliceAsBytes(mixed_u1[0..]), 8, 1, 0);
 }
 
 test "reduce comptime dtype API reports invalid inputs" {

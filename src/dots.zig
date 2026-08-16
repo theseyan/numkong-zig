@@ -83,7 +83,7 @@ pub fn symmetric(comptime dtype: types.DType, vectors: []const u8, vectors_count
 
 test "dots packed size supports all dtypes" {
     const supported = [_]types.DType{ .bf16, .f16, .e4m3, .e5m2, .e2m3, .e3m2, .f32, .f64, .i8, .u8, .i4, .u4, .u1 };
-    for (supported) |dtype| {
+    inline for (supported) |dtype| {
         try std.testing.expect((try packedSize(dtype, 1, 8)) > 0);
     }
 }

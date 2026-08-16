@@ -39,14 +39,39 @@ pub const F16C = types.F16C;
 pub const BF16C = types.BF16C;
 pub const F32C = types.F32C;
 pub const F64C = types.F64C;
+pub const Size = types.Size;
+pub const SSize = types.SSize;
 pub const DType = types.DType;
 pub const DTypeFamily = types.DTypeFamily;
 pub const KernelKind = types.KernelKind;
 pub const Capability = types.Capability;
 pub const KernelFunction = types.KernelFunction;
 pub const KernelLookup = types.KernelLookup;
+pub const TensorPosition = types.TensorPosition;
+pub const TensorShape = types.TensorShape;
+pub const TensorMaxRank = types.TensorMaxRank;
 
 pub const Version = types.Version;
+
+test "all module test suites are discovered" {
+    _ = types;
+    _ = scalar;
+    _ = cast;
+    _ = set;
+    _ = dot;
+    _ = spatial;
+    _ = probability;
+    _ = each;
+    _ = reduce;
+    _ = sparse;
+    _ = geospatial;
+    _ = curved;
+    _ = mesh;
+    _ = dots;
+    _ = sets;
+    _ = spatials;
+    _ = maxsim;
+}
 
 test "root namespace wrappers execute" {
     const std = @import("std");

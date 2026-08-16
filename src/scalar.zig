@@ -4,6 +4,7 @@ const types = @import("types.zig");
 
 pub fn Float(comptime dtype: types.DType) type {
     return switch (dtype) {
+        .f16 => types.F16,
         .f32 => types.F32,
         .f64 => types.F64,
         else => @compileError("unsupported floating scalar dtype"),
@@ -20,6 +21,8 @@ pub fn Integer(comptime dtype: types.DType) type {
         .i32 => types.I32,
         .u64 => types.U64,
         .i64 => types.I64,
+        .u4 => types.U4x2,
+        .i4 => types.I4x2,
         else => @compileError("unsupported integer scalar dtype"),
     };
 }
@@ -38,6 +41,7 @@ pub fn LowPrecision(comptime dtype: types.DType) type {
 
 pub fn sqrt(comptime dtype: types.DType, x: Float(dtype)) Float(dtype) {
     return switch (dtype) {
+        .f16 => c.nk_f16_sqrt(x),
         .f32 => c.nk_f32_sqrt(x),
         .f64 => c.nk_f64_sqrt(x),
         else => unreachable,
@@ -46,6 +50,7 @@ pub fn sqrt(comptime dtype: types.DType, x: Float(dtype)) Float(dtype) {
 
 pub fn rsqrt(comptime dtype: types.DType, x: Float(dtype)) Float(dtype) {
     return switch (dtype) {
+        .f16 => c.nk_f16_rsqrt(x),
         .f32 => c.nk_f32_rsqrt(x),
         .f64 => c.nk_f64_rsqrt(x),
         else => unreachable,
@@ -54,6 +59,7 @@ pub fn rsqrt(comptime dtype: types.DType, x: Float(dtype)) Float(dtype) {
 
 pub fn fma(comptime dtype: types.DType, a: Float(dtype), b: Float(dtype), addend: Float(dtype)) Float(dtype) {
     return switch (dtype) {
+        .f16 => c.nk_f16_fma(a, b, addend),
         .f32 => c.nk_f32_fma(a, b, addend),
         .f64 => c.nk_f64_fma(a, b, addend),
         else => unreachable,
@@ -70,6 +76,8 @@ pub fn saturatingAdd(comptime dtype: types.DType, a: Integer(dtype), b: Integer(
         .i32 => @intCast(c.nk_i32_saturating_add(a, b)),
         .u64 => @intCast(c.nk_u64_saturating_add(a, b)),
         .i64 => @intCast(c.nk_i64_saturating_add(a, b)),
+        .u4 => c.nk_u4x2_saturating_add(a, b),
+        .i4 => c.nk_i4x2_saturating_add(a, b),
         else => unreachable,
     };
 }
@@ -84,6 +92,8 @@ pub fn saturatingMul(comptime dtype: types.DType, a: Integer(dtype), b: Integer(
         .i32 => @intCast(c.nk_i32_saturating_mul(a, b)),
         .u64 => @intCast(c.nk_u64_saturating_mul(a, b)),
         .i64 => @intCast(c.nk_i64_saturating_mul(a, b)),
+        .u4 => c.nk_u4x2_saturating_mul(a, b),
+        .i4 => c.nk_i4x2_saturating_mul(a, b),
         else => unreachable,
     };
 }
@@ -107,6 +117,15 @@ test "floating point scalar helpers" {
     try std.testing.expectApproxEqAbs(@as(types.F64, 0.2), rsqrt(.f64, 25), 1e-12);
     try std.testing.expectApproxEqAbs(@as(types.F32, 10), fma(.f32, 2, 3, 4), 1e-6);
     try std.testing.expectApproxEqAbs(@as(types.F64, 10), fma(.f64, 2, 3, 4), 1e-12);
+
+    const cast = @import("cast.zig");
+    const four_f16 = cast.fromF32(.f16, 4);
+    const sixteen_f16 = cast.fromF32(.f16, 16);
+    const two_f16 = cast.fromF32(.f16, 2);
+    const three_f16 = cast.fromF32(.f16, 3);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 2), cast.toF32(.f16, sqrt(.f16, four_f16)), 1e-3);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 0.25), cast.toF32(.f16, rsqrt(.f16, sixteen_f16)), 1e-3);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 10), cast.toF32(.f16, fma(.f16, two_f16, three_f16, four_f16)), 1e-3);
 }
 
 test "saturating integer arithmetic" {
@@ -120,6 +139,12 @@ test "saturating integer arithmetic" {
     try std.testing.expectEqual(@as(types.I32, std.math.minInt(types.I32)), saturatingMul(.i32, std.math.minInt(types.I32), 2));
     try std.testing.expectEqual(@as(types.U64, std.math.maxInt(types.U64)), saturatingMul(.u64, std.math.maxInt(types.U64), 2));
     try std.testing.expectEqual(@as(types.I64, std.math.maxInt(types.I64)), saturatingAdd(.i64, std.math.maxInt(types.I64), 1));
+
+    // Packed 4-bit values: low nibble is element 0, high nibble is element 1.
+    try std.testing.expectEqual(@as(types.U4x2, 0x87), saturatingAdd(.u4, 0x76, 0x11));
+    try std.testing.expectEqual(@as(types.U4x2, 0xff), saturatingMul(.u4, 0xfe, 0x22));
+    try std.testing.expectEqual(@as(types.I4x2, 0x77), saturatingAdd(.i4, 0x67, 0x11));
+    try std.testing.expectEqual(@as(types.I4x2, 0x77), saturatingMul(.i4, 0x67, 0x22));
 }
 
 test "low precision ordering" {

@@ -1,3 +1,4 @@
+const std = @import("std");
 const c = @import("c.zig").raw;
 
 pub const U1x8 = u8;
@@ -33,6 +34,17 @@ pub const F16C = extern struct { real: F16, imag: F16 };
 pub const BF16C = extern struct { real: BF16, imag: BF16 };
 pub const F32C = extern struct { real: F32, imag: F32 };
 pub const F64C = extern struct { real: F64, imag: F64 };
+
+pub const TensorMaxRank: Size = @intCast(c.NK_TENSOR_MAX_RANK);
+pub const TensorPosition = extern struct {
+    coordinates: [TensorMaxRank]Size,
+    byte_offset: SSize,
+};
+pub const TensorShape = extern struct {
+    extents: [TensorMaxRank]Size,
+    strides: [TensorMaxRank]SSize,
+    rank: Size,
+};
 
 pub const Version = struct {
     pub const major = c.NK_VERSION_MAJOR;
@@ -172,16 +184,73 @@ pub fn kernelOutputDType(kind: KernelKind, input: DType) DType {
     return @enumFromInt(c.nk_kernel_output_dtype(@intFromEnum(kind), @intFromEnum(input)));
 }
 
+pub fn tensorPositionInit() TensorPosition {
+    return std.mem.zeroes(TensorPosition);
+}
+
+pub fn tensorShapeInit() TensorShape {
+    return std.mem.zeroes(TensorShape);
+}
+
+pub fn tensorPositionNext(extents: []const Size, strides: []const SSize, rank: Size, coordinates: []Size, byte_offset: *SSize) bool {
+    std.debug.assert(extents.len >= rank);
+    std.debug.assert(strides.len >= rank);
+    std.debug.assert(coordinates.len >= rank);
+    return c.nk_tensor_position_next(extents.ptr, strides.ptr, rank, coordinates.ptr, byte_offset) != 0;
+}
+
+pub fn tensorPositionLinearize(extents: []const Size, strides: []const SSize, rank: Size, coordinates: []const Size, byte_offset: *SSize) bool {
+    std.debug.assert(extents.len >= rank);
+    std.debug.assert(strides.len >= rank);
+    std.debug.assert(coordinates.len >= rank);
+    return c.nk_tensor_position_linearize(extents.ptr, strides.ptr, rank, coordinates.ptr, byte_offset) != 0;
+}
+
 test "metadata" {
-    const std = @import("std");
     try std.testing.expectEqual(@as(usize, 32), dtypeBits(.f32));
     try std.testing.expectEqual(DTypeFamily.float, dtypeFamily(.f32));
     try std.testing.expectEqual(DType.f64, kernelOutputDType(.dot, .f32));
     try std.testing.expect(usesDynamicDispatch());
 }
 
+test "tensor shape and position helpers" {
+    const position = tensorPositionInit();
+    try std.testing.expectEqual(@as(SSize, 0), position.byte_offset);
+    try std.testing.expectEqual(@as(Size, 0), position.coordinates[0]);
+
+    const shape = tensorShapeInit();
+    try std.testing.expectEqual(@as(Size, 0), shape.rank);
+    try std.testing.expectEqual(@as(Size, 0), shape.extents[0]);
+    try std.testing.expectEqual(@as(SSize, 0), shape.strides[0]);
+
+    const extents = [_]Size{ 2, 3 };
+    const strides = [_]SSize{ 3 * @as(SSize, @sizeOf(F32)), @as(SSize, @sizeOf(F32)) };
+    var coordinates = [_]Size{ 0, 0 };
+    var byte_offset: SSize = 0;
+
+    try std.testing.expect(tensorPositionLinearize(extents[0..], strides[0..], 2, coordinates[0..], &byte_offset));
+    try std.testing.expectEqual(@as(SSize, 0), byte_offset);
+
+    coordinates = .{ 0, 2 };
+    try std.testing.expect(tensorPositionLinearize(extents[0..], strides[0..], 2, coordinates[0..], &byte_offset));
+    try std.testing.expectEqual(@as(SSize, 8), byte_offset);
+
+    coordinates = .{ 0, 0 };
+    byte_offset = 0;
+    try std.testing.expect(tensorPositionNext(extents[0..], strides[0..], 2, coordinates[0..], &byte_offset));
+    try std.testing.expectEqualSlices(Size, &.{ 0, 1 }, coordinates[0..]);
+    try std.testing.expectEqual(@as(SSize, 4), byte_offset);
+
+    try std.testing.expect(tensorPositionNext(extents[0..], strides[0..], 2, coordinates[0..], &byte_offset));
+    try std.testing.expectEqualSlices(Size, &.{ 0, 2 }, coordinates[0..]);
+    try std.testing.expectEqual(@as(SSize, 8), byte_offset);
+
+    try std.testing.expect(tensorPositionNext(extents[0..], strides[0..], 2, coordinates[0..], &byte_offset));
+    try std.testing.expectEqualSlices(Size, &.{ 1, 0 }, coordinates[0..]);
+    try std.testing.expectEqual(@as(SSize, 12), byte_offset);
+}
+
 test "dispatch table lookup" {
-    const std = @import("std");
     const caps = capabilitiesAvailable();
     updateDispatchTable(caps);
     const lookup = findKernel(.dot, .f32, caps);

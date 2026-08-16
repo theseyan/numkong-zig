@@ -2,7 +2,7 @@
 
 Idiomatic Zig bindings for [NumKong](https://github.com/ashvardanian/NumKong), a SIMD-accelerated collection of computational kernels for vectors, sets, sparse data, geometry, and batched similarity search.
 
-Built for Zig `0.16.0` and NumKong `7.6.0`.
+Built for Zig `0.16.0` and NumKong `7.8.0`.
 
 ## Installation
 
@@ -75,8 +75,8 @@ const value = numkong.cast.toF32(.f16, half);
 
 | Module | Purpose |
 |---|---|
-| `types` | NumKong metadata, dtypes, capability detection, and dispatch lookup. |
-| `scalar` | Scalar math helpers, saturating integer operations, and low-precision ordering helpers. |
+| `types` | NumKong metadata, dtypes, capability detection, dispatch lookup, and tensor shape/position helpers. |
+| `scalar` | Scalar math helpers (f16/f32/f64), saturating integer and packed 4-bit operations, and low-precision ordering helpers. |
 | `cast` | `fromF32`/`toF32` scalar casts and slice conversions between supported NumKong dtypes. |
 | `dot` | Dense dot products and complex conjugating dot products. |
 | `spatial` | Single-vector Euclidean, squared Euclidean, and angular distances. |

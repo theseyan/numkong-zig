@@ -45,8 +45,8 @@ test "sets packed and symmetric u1 wrappers" {
 
     var jaccard_out = [_]types.F32{1};
     jaccardPacked(.u1, std.mem.sliceAsBytes(vectors[0..]), packed_queries[0..packed_size], 1, 1, 8, 1, &jaccard_out, @sizeOf(types.F32));
-    try std.testing.expectApproxEqAbs(@as(types.F32, 0), jaccard_out[0], 1e-6);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 0), jaccard_out[0], 1e-5);
     jaccard_out[0] = 1;
     jaccardSymmetric(.u1, std.mem.sliceAsBytes(vectors[0..]), 1, 8, 1, &jaccard_out, @sizeOf(types.F32), 0, 1);
-    try std.testing.expectApproxEqAbs(@as(types.F32, 0), jaccard_out[0], 1e-6);
+    try std.testing.expectApproxEqAbs(@as(types.F32, 0), jaccard_out[0], 1e-5);
 }

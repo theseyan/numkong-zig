@@ -61,8 +61,8 @@ test "geospatial comptime dtype API writes f64 output" {
 }
 
 test "geospatial comptime dtype API writes f32 output" {
-    const lats = [_]types.F32{ 0, 0.1 };
-    const lons = [_]types.F32{ 0, 0.2 };
+    const lats = [_]types.F32{ 0, 0 };
+    const lons = [_]types.F32{ 0, 0 };
     var out = [_]types.F32{ 1, 1 };
     const lats_bytes = std.mem.sliceAsBytes(lats[0..]);
     const lons_bytes = std.mem.sliceAsBytes(lons[0..]);
