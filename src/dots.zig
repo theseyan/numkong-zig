@@ -2,7 +2,15 @@ const std = @import("std");
 const c = @import("c.zig").raw;
 const types = @import("types.zig");
 
-pub const Error = error{UnsupportedDType};
+pub const Error = error{
+    UnsupportedDType,
+    OutputTooSmall,
+    OutputMisaligned,
+};
+
+fn expectPackedBuffer(buffer: []const u8) Error!void {
+    if (@intFromPtr(buffer.ptr) % types.PackedBufferAlignment != 0) return Error.OutputMisaligned;
+}
 
 pub fn packedSize(comptime dtype: types.DType, width: usize, depth: usize) Error!usize {
     return switch (dtype) {
@@ -24,7 +32,9 @@ pub fn packedSize(comptime dtype: types.DType, width: usize, depth: usize) Error
 }
 
 pub fn pack(comptime dtype: types.DType, b: []const u8, width: usize, depth: usize, row_stride_bytes: usize, out: []u8) Error!void {
-    std.debug.assert(out.len >= try packedSize(dtype, width, depth));
+    const size = try packedSize(dtype, width, depth);
+    if (out.len < size) return Error.OutputTooSmall;
+    try expectPackedBuffer(out);
     switch (dtype) {
         .bf16 => c.nk_dots_pack_bf16(@ptrCast(@alignCast(b.ptr)), width, depth, row_stride_bytes, out.ptr),
         .f16 => c.nk_dots_pack_f16(@ptrCast(@alignCast(b.ptr)), width, depth, row_stride_bytes, out.ptr),
@@ -44,6 +54,7 @@ pub fn pack(comptime dtype: types.DType, b: []const u8, width: usize, depth: usi
 }
 
 pub fn computePacked(comptime dtype: types.DType, a: []const u8, b_packed: []const u8, height: usize, width: usize, depth: usize, a_stride_bytes: usize, out: []u8, out_stride_bytes: usize) Error!void {
+    try expectPackedBuffer(b_packed);
     switch (dtype) {
         .bf16 => c.nk_dots_packed_bf16(@ptrCast(@alignCast(a.ptr)), b_packed.ptr, @ptrCast(@alignCast(out.ptr)), height, width, depth, a_stride_bytes, out_stride_bytes),
         .f16 => c.nk_dots_packed_f16(@ptrCast(@alignCast(a.ptr)), b_packed.ptr, @ptrCast(@alignCast(out.ptr)), height, width, depth, a_stride_bytes, out_stride_bytes),
@@ -91,7 +102,7 @@ test "dots packed size supports all dtypes" {
 test "dots f32 pack packed and symmetric" {
     const a = [_]types.F32{ 1, 2 };
     const b = [_]types.F32{ 3, 4 };
-    var packed_buffer: [4096]u8 = undefined;
+    var packed_buffer: [4096]u8 align(types.PackedBufferAlignment) = undefined;
     const size = try packedSize(.f32, 1, 2);
     try pack(.f32, std.mem.sliceAsBytes(b[0..]), 1, 2, 2 * @sizeOf(types.F32), packed_buffer[0..size]);
 

@@ -41,6 +41,7 @@ pub const F32C = types.F32C;
 pub const F64C = types.F64C;
 pub const Size = types.Size;
 pub const SSize = types.SSize;
+pub const PackedBufferAlignment = types.PackedBufferAlignment;
 pub const DType = types.DType;
 pub const DTypeFamily = types.DTypeFamily;
 pub const KernelKind = types.KernelKind;

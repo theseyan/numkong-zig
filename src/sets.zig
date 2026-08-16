@@ -32,7 +32,7 @@ pub fn jaccardSymmetric(comptime dtype: types.DType, vectors: []const u8, vector
 
 test "sets packed and symmetric u1 wrappers" {
     const vectors = [_]types.U1x8{0xff};
-    var packed_queries: [4096]u8 = undefined;
+    var packed_queries: [4096]u8 align(types.PackedBufferAlignment) = undefined;
     const packed_size = try @import("dots.zig").packedSize(.u1, 1, 8);
     try @import("dots.zig").pack(.u1, std.mem.sliceAsBytes(vectors[0..]), 1, 8, 1, packed_queries[0..packed_size]);
 

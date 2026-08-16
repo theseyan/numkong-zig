@@ -2,7 +2,15 @@ const std = @import("std");
 const c = @import("c.zig").raw;
 const types = @import("types.zig");
 
-pub const Error = error{UnsupportedDType};
+pub const Error = error{
+    UnsupportedDType,
+    OutputTooSmall,
+    OutputMisaligned,
+};
+
+fn expectPackedBuffer(buffer: []const u8) Error!void {
+    if (@intFromPtr(buffer.ptr) % types.PackedBufferAlignment != 0) return Error.OutputMisaligned;
+}
 
 pub fn packedSize(comptime dtype: types.DType, vector_count: usize, depth: usize) Error!usize {
     return switch (dtype) {
@@ -14,7 +22,9 @@ pub fn packedSize(comptime dtype: types.DType, vector_count: usize, depth: usize
 }
 
 pub fn pack(comptime dtype: types.DType, vectors: []const u8, vector_count: usize, depth: usize, stride_bytes: usize, out: []u8) Error!void {
-    std.debug.assert(out.len >= try packedSize(dtype, vector_count, depth));
+    const size = try packedSize(dtype, vector_count, depth);
+    if (out.len < size) return Error.OutputTooSmall;
+    try expectPackedBuffer(out);
     switch (dtype) {
         .bf16 => c.nk_maxsim_pack_bf16(@ptrCast(@alignCast(vectors.ptr)), vector_count, depth, stride_bytes, out.ptr),
         .f32 => c.nk_maxsim_pack_f32(@ptrCast(@alignCast(vectors.ptr)), vector_count, depth, stride_bytes, out.ptr),
@@ -24,6 +34,8 @@ pub fn pack(comptime dtype: types.DType, vectors: []const u8, vector_count: usiz
 }
 
 pub fn compute(comptime dtype: types.DType, query_packed: []const u8, document_packed: []const u8, query_count: usize, document_count: usize, depth: usize) Error!types.F64 {
+    try expectPackedBuffer(query_packed);
+    try expectPackedBuffer(document_packed);
     return switch (dtype) {
         .bf16 => blk: {
             var result: types.F32 = undefined;
@@ -46,8 +58,8 @@ pub fn compute(comptime dtype: types.DType, query_packed: []const u8, document_p
 
 test "maxsim f32 pack and compute" {
     const vector = [_]types.F32{ 1, 2 };
-    var query_packed: [4096]u8 = undefined;
-    var document_packed: [4096]u8 = undefined;
+    var query_packed: [4096]u8 align(types.PackedBufferAlignment) = undefined;
+    var document_packed: [4096]u8 align(types.PackedBufferAlignment) = undefined;
     const size = try packedSize(.f32, 1, 2);
     try pack(.f32, std.mem.sliceAsBytes(vector[0..]), 1, 2, 2 * @sizeOf(types.F32), query_packed[0..size]);
     try pack(.f32, std.mem.sliceAsBytes(vector[0..]), 1, 2, 2 * @sizeOf(types.F32), document_packed[0..size]);

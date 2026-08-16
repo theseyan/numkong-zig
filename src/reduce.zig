@@ -155,10 +155,10 @@ fn expectZeroMoment(comptime dtype: types.DType, data: []const u8, count: usize)
     }
 }
 
-fn expectSingleElementMinMax(comptime dtype: types.DType, data: []const u8, count: usize) !void {
+fn expectMinMaxIndices(comptime dtype: types.DType, data: []const u8, count: usize, min_index: usize, max_index: usize) !void {
     const result = try minmax(dtype, data, count);
-    try std.testing.expectEqual(@as(usize, 0), result.min_index);
-    try std.testing.expectEqual(@as(usize, 0), result.max_index);
+    try std.testing.expectEqual(min_index, result.min_index);
+    try std.testing.expectEqual(max_index, result.max_index);
 }
 
 fn expectPackedMinMax(comptime dtype: types.DType, data: []const u8, count: usize, min_index: usize, max_index: usize) !void {
@@ -187,7 +187,7 @@ test "reduce comptime dtype API returns exact floating results" {
     try std.testing.expectEqual(@as(types.F64, 3), (try minmax(.f64, std.mem.sliceAsBytes(xs_f64[0..]), xs_f64.len)).max);
 }
 
-test "reduce comptime dtype API covers all zero dtypes" {
+test "reduce comptime dtype API covers all dtypes" {
     const cast = @import("cast.zig");
     const zero_f16 = [_]types.F16{cast.fromF32(.f16, 0)};
     const zero_bf16 = [_]types.BF16{cast.fromF32(.bf16, 0)};
@@ -225,23 +225,42 @@ test "reduce comptime dtype API covers all zero dtypes" {
     try expectZeroMoment(.u4, std.mem.sliceAsBytes(zero_u4[0..]), 2);
     try expectZeroMoment(.u1, std.mem.sliceAsBytes(zero_u1[0..]), 8);
 
-    try expectSingleElementMinMax(.f16, std.mem.sliceAsBytes(zero_f16[0..]), 1);
-    try expectSingleElementMinMax(.bf16, std.mem.sliceAsBytes(zero_bf16[0..]), 1);
-    try expectSingleElementMinMax(.e4m3, std.mem.sliceAsBytes(zero_e4m3[0..]), 1);
-    try expectSingleElementMinMax(.e5m2, std.mem.sliceAsBytes(zero_e5m2[0..]), 1);
-    try expectSingleElementMinMax(.e2m3, std.mem.sliceAsBytes(zero_e2m3[0..]), 1);
-    try expectSingleElementMinMax(.e3m2, std.mem.sliceAsBytes(zero_e3m2[0..]), 1);
-    try expectSingleElementMinMax(.i8, std.mem.sliceAsBytes(zero_i8[0..]), 1);
-    try expectSingleElementMinMax(.u8, std.mem.sliceAsBytes(zero_u8[0..]), 1);
-    try expectSingleElementMinMax(.i16, std.mem.sliceAsBytes(zero_i16[0..]), 1);
-    try expectSingleElementMinMax(.u16, std.mem.sliceAsBytes(zero_u16[0..]), 1);
-    try expectSingleElementMinMax(.i32, std.mem.sliceAsBytes(zero_i32[0..]), 1);
-    try expectSingleElementMinMax(.u32, std.mem.sliceAsBytes(zero_u32[0..]), 1);
-    try expectSingleElementMinMax(.i64, std.mem.sliceAsBytes(zero_i64[0..]), 1);
-    try expectSingleElementMinMax(.u64, std.mem.sliceAsBytes(zero_u64[0..]), 1);
+    const mixed_f64 = [_]types.F64{ 0, 1 };
+    const mixed_f32 = [_]types.F32{ 0, 1 };
+    const mixed_f16 = [_]types.F16{ cast.fromF32(.f16, 0), cast.fromF32(.f16, 1) };
+    const mixed_bf16 = [_]types.BF16{ cast.fromF32(.bf16, 0), cast.fromF32(.bf16, 1) };
+    const mixed_e4m3 = [_]types.E4M3{ cast.fromF32(.e4m3, 0), cast.fromF32(.e4m3, 1) };
+    const mixed_e5m2 = [_]types.E5M2{ cast.fromF32(.e5m2, 0), cast.fromF32(.e5m2, 1) };
+    const mixed_e2m3 = [_]types.E2M3{ cast.fromF32(.e2m3, 0), cast.fromF32(.e2m3, 1) };
+    const mixed_e3m2 = [_]types.E3M2{ cast.fromF32(.e3m2, 0), cast.fromF32(.e3m2, 1) };
+    const mixed_i8 = [_]types.I8{ 0, 1 };
+    const mixed_u8 = [_]types.U8{ 0, 1 };
+    const mixed_i16 = [_]types.I16{ 0, 1 };
+    const mixed_u16 = [_]types.U16{ 0, 1 };
+    const mixed_i32 = [_]types.I32{ 0, 1 };
+    const mixed_u32 = [_]types.U32{ 0, 1 };
+    const mixed_i64 = [_]types.I64{ 0, 1 };
+    const mixed_u64 = [_]types.U64{ 0, 1 };
     const mixed_i4 = [_]types.I4x2{0x01};
     const mixed_u4 = [_]types.U4x2{0x01};
     const mixed_u1 = [_]types.U1x8{0x01};
+
+    try expectMinMaxIndices(.f64, std.mem.sliceAsBytes(mixed_f64[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.f32, std.mem.sliceAsBytes(mixed_f32[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.f16, std.mem.sliceAsBytes(mixed_f16[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.bf16, std.mem.sliceAsBytes(mixed_bf16[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.e4m3, std.mem.sliceAsBytes(mixed_e4m3[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.e5m2, std.mem.sliceAsBytes(mixed_e5m2[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.e2m3, std.mem.sliceAsBytes(mixed_e2m3[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.e3m2, std.mem.sliceAsBytes(mixed_e3m2[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.i8, std.mem.sliceAsBytes(mixed_i8[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.u8, std.mem.sliceAsBytes(mixed_u8[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.i16, std.mem.sliceAsBytes(mixed_i16[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.u16, std.mem.sliceAsBytes(mixed_u16[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.i32, std.mem.sliceAsBytes(mixed_i32[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.u32, std.mem.sliceAsBytes(mixed_u32[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.i64, std.mem.sliceAsBytes(mixed_i64[0..]), 2, 0, 1);
+    try expectMinMaxIndices(.u64, std.mem.sliceAsBytes(mixed_u64[0..]), 2, 0, 1);
     try expectPackedMinMax(.i4, std.mem.sliceAsBytes(mixed_i4[0..]), 2, 1, 0);
     try expectPackedMinMax(.u4, std.mem.sliceAsBytes(mixed_u4[0..]), 2, 1, 0);
     try expectPackedMinMax(.u1, std.mem.sliceAsBytes(mixed_u1[0..]), 8, 1, 0);

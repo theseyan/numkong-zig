@@ -2,9 +2,17 @@ const std = @import("std");
 const c = @import("c.zig").raw;
 const types = @import("types.zig");
 
-pub const Error = error{UnsupportedDType};
+pub const Error = error{
+    UnsupportedDType,
+    OutputMisaligned,
+};
+
+fn expectPackedBuffer(buffer: []const u8) Error!void {
+    if (@intFromPtr(buffer.ptr) % types.PackedBufferAlignment != 0) return Error.OutputMisaligned;
+}
 
 pub fn angularPacked(comptime dtype: types.DType, a: []const u8, b_packed: []const u8, out: []u8, rows: usize, cols: usize, depth: usize, a_stride_bytes: usize, out_stride_bytes: usize) Error!void {
+    try expectPackedBuffer(b_packed);
     switch (dtype) {
         .f32 => c.nk_angulars_packed_f32(@ptrCast(@alignCast(a.ptr)), b_packed.ptr, @ptrCast(@alignCast(out.ptr)), rows, cols, depth, a_stride_bytes, out_stride_bytes),
         .f64 => c.nk_angulars_packed_f64(@ptrCast(@alignCast(a.ptr)), b_packed.ptr, @ptrCast(@alignCast(out.ptr)), rows, cols, depth, a_stride_bytes, out_stride_bytes),
@@ -23,6 +31,7 @@ pub fn angularPacked(comptime dtype: types.DType, a: []const u8, b_packed: []con
 }
 
 pub fn euclideanPacked(comptime dtype: types.DType, a: []const u8, b_packed: []const u8, out: []u8, rows: usize, cols: usize, depth: usize, a_stride_bytes: usize, out_stride_bytes: usize) Error!void {
+    try expectPackedBuffer(b_packed);
     switch (dtype) {
         .f32 => c.nk_euclideans_packed_f32(@ptrCast(@alignCast(a.ptr)), b_packed.ptr, @ptrCast(@alignCast(out.ptr)), rows, cols, depth, a_stride_bytes, out_stride_bytes),
         .f64 => c.nk_euclideans_packed_f64(@ptrCast(@alignCast(a.ptr)), b_packed.ptr, @ptrCast(@alignCast(out.ptr)), rows, cols, depth, a_stride_bytes, out_stride_bytes),
@@ -78,7 +87,7 @@ pub fn euclideanSymmetric(comptime dtype: types.DType, vectors: []const u8, vect
 
 test "spatials f32 packed and symmetric" {
     const vector = [_]types.F32{ 1, 2 };
-    var packed_buffer: [4096]u8 = undefined;
+    var packed_buffer: [4096]u8 align(types.PackedBufferAlignment) = undefined;
     const packed_size = try @import("dots.zig").packedSize(.f32, 1, 2);
     try @import("dots.zig").pack(.f32, std.mem.sliceAsBytes(vector[0..]), 1, 2, 2 * @sizeOf(types.F32), packed_buffer[0..packed_size]);
 

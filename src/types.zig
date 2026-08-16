@@ -22,6 +22,7 @@ pub const F32 = f32;
 pub const F64 = f64;
 pub const Size = usize;
 pub const SSize = isize;
+pub const PackedBufferAlignment = 64;
 pub const Capability = u64;
 pub const KernelFunction = *const fn (?*anyopaque) callconv(.c) void;
 
