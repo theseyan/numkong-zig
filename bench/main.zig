@@ -4,6 +4,8 @@ const zbench = @import("zbench");
 
 const allocator = std.heap.c_allocator;
 const types = numkong.types;
+const PackedBytes = []align(numkong.PackedBufferAlignment) u8;
+const PackedAlignment = std.mem.Alignment.fromByteUnits(numkong.PackedBufferAlignment);
 
 const dense_len = 4096;
 const curved_dim = 64;
@@ -137,18 +139,18 @@ const Data = struct {
     mesh_b: []types.F32,
     matrix_a: []types.F32,
     matrix_b: []types.F32,
-    dots_packed: []u8,
+    dots_packed: PackedBytes,
     dots_out: []types.F64,
     dots_symmetric_out: []types.F64,
     u1_vectors: []types.U1x8,
     u1_queries: []types.U1x8,
-    u1_packed: []u8,
+    u1_packed: PackedBytes,
     sets_out_u32: []types.U32,
     sets_out_f32: []types.F32,
     maxsim_queries_data: []types.F32,
     maxsim_docs_data: []types.F32,
-    maxsim_query_packed: []u8,
-    maxsim_doc_packed: []u8,
+    maxsim_query_packed: PackedBytes,
+    maxsim_doc_packed: PackedBytes,
 
     fn init() !Data {
         var data: Data = undefined;
@@ -241,21 +243,68 @@ const Data = struct {
         fillF32(data.maxsim_docs_data, 0.001, 71);
 
         const dots_packed_size = try numkong.dots.packedSize(.f32, matrix_cols, matrix_depth);
-        data.dots_packed = try allocator.alloc(u8, dots_packed_size);
+        data.dots_packed = try allocator.alignedAlloc(u8, PackedAlignment, dots_packed_size);
         try numkong.dots.pack(.f32, bytes(data.matrix_b), matrix_cols, matrix_depth, matrix_depth * @sizeOf(types.F32), data.dots_packed);
 
         const u1_packed_size = try numkong.dots.packedSize(.u1, matrix_cols, u1_dimensions);
-        data.u1_packed = try allocator.alloc(u8, u1_packed_size);
+        data.u1_packed = try allocator.alignedAlloc(u8, PackedAlignment, u1_packed_size);
         try numkong.dots.pack(.u1, bytes(data.u1_queries), matrix_cols, u1_dimensions, u1_bytes, data.u1_packed);
 
         const maxsim_query_size = try numkong.maxsim.packedSize(.f32, maxsim_queries, matrix_depth);
         const maxsim_doc_size = try numkong.maxsim.packedSize(.f32, maxsim_docs, matrix_depth);
-        data.maxsim_query_packed = try allocator.alloc(u8, maxsim_query_size);
-        data.maxsim_doc_packed = try allocator.alloc(u8, maxsim_doc_size);
+        data.maxsim_query_packed = try allocator.alignedAlloc(u8, PackedAlignment, maxsim_query_size);
+        data.maxsim_doc_packed = try allocator.alignedAlloc(u8, PackedAlignment, maxsim_doc_size);
         try numkong.maxsim.pack(.f32, bytes(data.maxsim_queries_data), maxsim_queries, matrix_depth, matrix_depth * @sizeOf(types.F32), data.maxsim_query_packed);
         try numkong.maxsim.pack(.f32, bytes(data.maxsim_docs_data), maxsim_docs, matrix_depth, matrix_depth * @sizeOf(types.F32), data.maxsim_doc_packed);
 
         return data;
+    }
+
+    fn deinit(self: *Data) void {
+        allocator.free(self.maxsim_doc_packed);
+        allocator.free(self.maxsim_query_packed);
+        allocator.free(self.maxsim_docs_data);
+        allocator.free(self.maxsim_queries_data);
+        allocator.free(self.sets_out_f32);
+        allocator.free(self.sets_out_u32);
+        allocator.free(self.u1_packed);
+        allocator.free(self.u1_queries);
+        allocator.free(self.u1_vectors);
+        allocator.free(self.dots_symmetric_out);
+        allocator.free(self.dots_out);
+        allocator.free(self.dots_packed);
+        allocator.free(self.matrix_b);
+        allocator.free(self.matrix_a);
+        allocator.free(self.mesh_b);
+        allocator.free(self.mesh_a);
+        allocator.free(self.curved_matrix);
+        allocator.free(self.curved_b);
+        allocator.free(self.curved_a);
+        allocator.free(self.geo_out);
+        allocator.free(self.geo_b_lons);
+        allocator.free(self.geo_b_lats);
+        allocator.free(self.geo_a_lons);
+        allocator.free(self.geo_a_lats);
+        allocator.free(self.sparse_out);
+        allocator.free(self.sparse_weights_b);
+        allocator.free(self.sparse_weights_a);
+        allocator.free(self.sparse_b);
+        allocator.free(self.sparse_a);
+        allocator.free(self.u1_b);
+        allocator.free(self.u1_a);
+        allocator.free(self.u32_b);
+        allocator.free(self.u32_a);
+        allocator.free(self.u8_b);
+        allocator.free(self.u8_a);
+        allocator.free(self.prob_b);
+        allocator.free(self.prob_a);
+        allocator.free(self.f32c_b);
+        allocator.free(self.f32c_a);
+        allocator.free(self.f16_data);
+        allocator.free(self.f32_out);
+        allocator.free(self.f32_c);
+        allocator.free(self.f32_b);
+        allocator.free(self.f32_a);
     }
 };
 
@@ -286,6 +335,7 @@ pub fn main(init: std.process.Init) !void {
     try writer.flush();
 
     var data = try Data.init();
+    defer data.deinit();
     var bench = zbench.Benchmark.init(allocator, .{
         .time_budget_ns = 250_000_000,
         .max_iterations = 5000,
@@ -381,7 +431,7 @@ fn runKernel(data: *Data, kernel: Kernel) f64 {
             break :blk data.dots_symmetric_out[0];
         },
         .sets_hamming_packed_u1 => blk: {
-            numkong.sets.hammingPacked(.u1, bytes(data.u1_vectors), data.u1_packed, matrix_rows, matrix_cols, u1_dimensions, u1_bytes, data.sets_out_u32, matrix_cols * @sizeOf(types.U32));
+            numkong.sets.hammingPacked(.u1, bytes(data.u1_vectors), data.u1_packed, matrix_rows, matrix_cols, u1_dimensions, u1_bytes, data.sets_out_u32, matrix_cols * @sizeOf(types.U32)) catch unreachable;
             break :blk @floatFromInt(data.sets_out_u32[0]);
         },
         .sets_jaccard_symmetric_u1 => blk: {
